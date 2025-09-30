@@ -91,6 +91,8 @@ class AuthSuccessResponse(BaseModel):
         json_schema_extra={
             "example": {
                 "message": "Successfully authenticated with Spotify",
+                "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+                "token_type": "Bearer",
                 "user": {
                     "id": 1,
                     "spotify_user_id": "spotify_user_123",
@@ -103,6 +105,8 @@ class AuthSuccessResponse(BaseModel):
     )
 
     message: str = Field(default="Successfully authenticated", description="Success message")
+    access_token: str = Field(..., description="JWT access token")
+    token_type: str = Field(default="Bearer", description="Token type")
     user: UserResponse = Field(..., description="Authenticated user information")
 
 

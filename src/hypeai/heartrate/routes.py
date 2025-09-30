@@ -3,6 +3,7 @@
 import logging
 
 from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect
+from shared.jwt import get_user_id_from_token
 
 from .connection_manager import manager
 from .services import ZoneService
@@ -15,16 +16,29 @@ router = APIRouter()
 @router.websocket("/ws/heartrate")
 async def websocket_heartrate(
     websocket: WebSocket,
-    user_id: str = Query(..., description="User ID for authentication"),
+    token: str = Query(..., description="JWT access token for authentication"),
 ):
     """
     WebSocket endpoint for real-time heart rate streaming.
 
+    Requires JWT token as query parameter (?token=<jwt_token>).
+
     Args:
         websocket: WebSocket connection
-        user_id: User ID from query parameter
+        token: JWT access token from query parameter
+
+    Raises:
+        WebSocket 403: If token is invalid or expired
     """
-    await manager.connect(websocket, user_id)
+    # Validate JWT token and extract user ID
+    try:
+        user_id = get_user_id_from_token(token)
+    except Exception as e:
+        logger.error(f"WebSocket authentication failed: {e}")
+        await websocket.close(code=1008, reason="Invalid or expired token")
+        return
+
+    await manager.connect(websocket, str(user_id))
 
     try:
         while True:
@@ -35,7 +49,7 @@ async def websocket_heartrate(
             if not bpm:
                 await manager.send_personal_message(
                     {"error": "Missing 'bpm' field"},
-                    user_id
+                    str(user_id)
                 )
                 continue
 
@@ -53,14 +67,14 @@ async def websocket_heartrate(
                     "features": features,
                     "message": f"Heart rate {bpm} BPM mapped to {zone} zone"
                 },
-                user_id
+                str(user_id)
             )
 
             logger.debug(f"User {user_id}: {bpm} BPM -> {zone} zone")
 
     except WebSocketDisconnect:
-        manager.disconnect(user_id)
+        manager.disconnect(str(user_id))
         logger.info(f"User {user_id} disconnected")
     except Exception as e:
         logger.error(f"WebSocket error for user {user_id}: {e}")
-        manager.disconnect(user_id)
+        manager.disconnect(str(user_id))

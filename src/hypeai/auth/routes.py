@@ -10,6 +10,8 @@ import secrets
 import httpx
 from database import get_session
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from shared.dependencies import get_current_user_id
+from shared.jwt import create_access_token
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .schemas import AuthSuccessResponse, LogoutResponse, SpotifyAuthURL, UserResponse
@@ -80,8 +82,13 @@ async def spotify_callback(
         await AuthService.save_tokens(session, user.id, token_dict)
         await session.commit()
 
+        # Create JWT access token
+        access_token = create_access_token(user_id=user.id, email=user.email)
+
         return AuthSuccessResponse(
             message="Successfully authenticated with Spotify",
+            access_token=access_token,
+            token_type="Bearer",
             user=UserResponse.model_validate(user)
         )
 
@@ -95,15 +102,17 @@ async def spotify_callback(
 
 @router.post("/logout", response_model=LogoutResponse)
 async def logout(
-    user_id: int = Query(..., description="User ID"),
     session: AsyncSession = Depends(get_session),
+    user_id: int = Depends(get_current_user_id),
 ):
     """
     Logout user by revoking tokens.
 
+    Requires JWT authentication via Authorization header.
+
     Args:
-        user_id: User ID
         session: Database session
+        user_id: User ID from JWT token
 
     Returns:
         Logout success response
@@ -126,15 +135,17 @@ async def logout(
 
 @router.get("/me", response_model=UserResponse)
 async def get_current_user_info(
-    user_id: int = Query(..., description="User ID"),
     session: AsyncSession = Depends(get_session),
+    user_id: int = Depends(get_current_user_id),
 ):
     """
     Get current user information.
 
+    Requires JWT authentication via Authorization header.
+
     Args:
-        user_id: User ID
         session: Database session
+        user_id: User ID from JWT token
 
     Returns:
         User information

@@ -8,6 +8,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 
 from shared.security import TokenEncryption
+from sqlalchemy import Column, LargeBinary
 from sqlmodel import Field, Relationship, SQLModel
 
 if TYPE_CHECKING:
@@ -42,8 +43,8 @@ class OAuthToken(SQLModel, table=True):
     user_id: int = Field(foreign_key="users.id", index=True)
 
     # Store encrypted with Fernet
-    access_token_encrypted: bytes = Field(sa_column_kwargs={"type_": "LargeBinary"})
-    refresh_token_encrypted: bytes = Field(sa_column_kwargs={"type_": "LargeBinary"})
+    access_token_encrypted: bytes = Field(sa_column=Column(LargeBinary))
+    refresh_token_encrypted: bytes = Field(sa_column=Column(LargeBinary))
 
     expires_at: datetime
     issued_at: datetime = Field(default_factory=datetime.utcnow)

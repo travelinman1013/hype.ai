@@ -1,0 +1,96 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: hypeai-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-hypeai}
+      POSTGRES_USER: ${POSTGRES_USER:-hypeai_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme_secure_password}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-hypeai_user} -d ${POSTGRES_DB:-hypeai}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - hypeai-network
+    restart: unless-stopped
+
+  # FastAPI Application
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: hypeai-api
+    environment:
+      # Application Settings
+      APP_NAME: ${APP_NAME:-HypeAI}
+      DEBUG: ${DEBUG:-false}
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+
+      # Database Settings
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-hypeai_user}:${POSTGRES_PASSWORD:-changeme_secure_password}@postgres:5432/${POSTGRES_DB:-hypeai}
+
+      # Security Settings
+      SECRET_KEY: ${SECRET_KEY}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+
+      # Spotify OAuth2 Configuration
+      SPOTIFY_CLIENT_ID: ${SPOTIFY_CLIENT_ID}
+      SPOTIFY_CLIENT_SECRET: ${SPOTIFY_CLIENT_SECRET}
+      SPOTIFY_REDIRECT_URI: ${SPOTIFY_REDIRECT_URI:-http://localhost:8000/auth/spotify/callback}
+      SPOTIFY_SCOPES: ${SPOTIFY_SCOPES:-user-modify-playback-state user-read-playback-state user-read-email}
+
+      # CORS Settings
+      CORS_ORIGINS: ${CORS_ORIGINS:-["http://localhost:3000","http://localhost:8000"]}
+
+      # JWT Settings
+      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
+      JWT_ACCESS_TOKEN_EXPIRE_MINUTES: ${JWT_ACCESS_TOKEN_EXPIRE_MINUTES:-1440}
+    ports:
+      - "${API_PORT:-8000}:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      # Mount for development hot-reload (comment out for production)
+      - ./src/hypeai:/app/src/hypeai:ro
+    networks:
+      - hypeai-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Optional: Adminer for database management (development only)
+  adminer:
+    image: adminer:latest
+    container_name: hypeai-adminer
+    ports:
+      - "${ADMINER_PORT:-8080}:8080"
+    depends_on:
+      - postgres
+    networks:
+      - hypeai-network
+    restart: unless-stopped
+    profiles:
+      - dev
+
+volumes:
+  postgres_data:
+    name: hypeai_postgres_data
+
+networks:
+  hypeai-network:
+    name: hypeai-network
+    driver: bridge

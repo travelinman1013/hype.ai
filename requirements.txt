@@ -20,6 +20,7 @@ pydantic-settings>=2.1.0
 
 # Security and Encryption
 cryptography>=41.0.0
+PyJWT>=2.8.0
 
 # WebSockets
 websockets>=12.0

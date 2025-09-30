@@ -8,45 +8,46 @@ Reusable dependencies for authentication, authorization, and database sessions.
 from auth.models import User
 from database import get_session
 from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from shared.jwt import get_user_id_from_token
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from users.models import Subscription
 
+# HTTP Bearer token security scheme
+security = HTTPBearer()
 
-async def get_current_user_id(user_id: str | None = None) -> str:
+
+async def get_current_user_id(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+) -> int:
     """
-    Get current user ID from request context.
-
-    This is a placeholder - in production, extract from JWT token or session.
+    Get current user ID from JWT token in Authorization header.
 
     Args:
-        user_id: User ID from token/session
+        credentials: HTTP Bearer credentials from Authorization header
 
     Returns:
         User ID
 
     Raises:
-        HTTPException: If user is not authenticated
+        HTTPException: If token is invalid or user ID cannot be extracted
     """
-    if not user_id:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Not authenticated",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+    token = credentials.credentials
+    user_id = get_user_id_from_token(token)
     return user_id
 
 
 async def get_current_user(
     session: AsyncSession = Depends(get_session),
-    user_id: str = Depends(get_current_user_id),
+    user_id: int = Depends(get_current_user_id),
 ) -> User:
     """
-    Get current authenticated user.
+    Get current authenticated user from JWT token.
 
     Args:
         session: Database session
-        user_id: User ID from authentication
+        user_id: User ID from JWT token
 
     Returns:
         User object
@@ -55,7 +56,7 @@ async def get_current_user(
         HTTPException: If user not found
     """
     result = await session.execute(
-        select(User).where(User.spotify_user_id == user_id)
+        select(User).where(User.id == user_id)
     )
     user = result.scalars().first()
 

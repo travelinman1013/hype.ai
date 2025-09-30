@@ -6,6 +6,7 @@ from auth.services import AuthService
 from database import get_session
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from heartrate.services import ZoneService
+from shared.dependencies import get_current_user_id
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .rate_limiter import rate_limiter
@@ -47,15 +48,17 @@ async def get_zone_configuration():
 
 @router.get("/current")
 async def get_current_playback(
-    user_id: int = Query(..., description="User ID"),
     session: AsyncSession = Depends(get_session),
+    user_id: int = Depends(get_current_user_id),
 ):
     """
     Get user's current Spotify playback state.
 
+    Requires JWT authentication via Authorization header.
+
     Args:
-        user_id: User ID
         session: Database session
+        user_id: User ID from JWT token
 
     Returns:
         Current playback state
@@ -84,16 +87,18 @@ async def get_current_playback(
 @router.post("/queue")
 async def queue_track(
     track_uri: str = Query(..., description="Spotify track URI"),
-    user_id: int = Query(..., description="User ID"),
     session: AsyncSession = Depends(get_session),
+    user_id: int = Depends(get_current_user_id),
 ):
     """
     Manually queue a track (for testing).
 
+    Requires JWT authentication via Authorization header.
+
     Args:
         track_uri: Spotify track URI
-        user_id: User ID
         session: Database session
+        user_id: User ID from JWT token
 
     Returns:
         Success message

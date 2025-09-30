@@ -325,17 +325,262 @@ uvicorn src.hypeai.main:app --host 0.0.0.0 --port 8000 --workers 4
 
 ### Docker Deployment
 
+The project includes production-ready Docker configuration with multi-stage builds and PostgreSQL.
+
+#### Prerequisites
+
+- Docker 20.10+
+- Docker Compose 2.0+
+
+#### Quick Start with Docker Compose
+
+**1. Configure Environment:**
+
+```bash
+# Copy and edit environment file
+cp .env.example .env
+# Edit .env with your Spotify credentials and generate secure keys
+```
+
+**2. Generate Security Keys:**
+
+```bash
+# Generate SECRET_KEY
+python -c "import secrets; print(secrets.token_urlsafe(32))"
+
+# Generate ENCRYPTION_KEY
+python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+```
+
+**3. Start Services:**
+
+```bash
+# Build and start all services (API + PostgreSQL)
+docker-compose up -d
+
+# View logs
+docker-compose logs -f api
+
+# Check service health
+docker-compose ps
+```
+
+**4. Run Database Migrations:**
+
+```bash
+# Run migrations inside the container
+docker-compose exec api alembic upgrade head
+```
+
+**5. Access the Application:**
+
+- API: http://localhost:8000
+- API Docs: http://localhost:8000/docs
+- Health Check: http://localhost:8000/health
+- Adminer (Dev): http://localhost:8080 (with `--profile dev`)
+
+#### Docker Compose Services
+
+| Service | Description | Port | Health Check |
+|---------|-------------|------|--------------|
+| **api** | FastAPI application | 8000 | `/health` endpoint |
+| **postgres** | PostgreSQL 16 database | 5432 | pg_isready |
+| **adminer** | Database UI (dev only) | 8080 | HTTP check |
+
+#### Docker Commands
+
+**Development Mode:**
+
+```bash
+# Start with development tools (includes Adminer)
+docker-compose --profile dev up -d
+
+# Hot-reload enabled (code changes auto-restart)
+docker-compose logs -f api
+
+# Execute commands in container
+docker-compose exec api python -m pytest
+docker-compose exec api alembic revision --autogenerate -m "Migration name"
+```
+
+**Production Mode:**
+
+```bash
+# Start without development tools
+docker-compose up -d
+
+# Run with multiple workers
+docker-compose up -d --scale api=4
+
+# View resource usage
+docker stats
+```
+
+**Maintenance:**
+
+```bash
+# Stop services
+docker-compose stop
+
+# Stop and remove containers
+docker-compose down
+
+# Remove volumes (WARNING: deletes database)
+docker-compose down -v
+
+# Rebuild after code changes
+docker-compose build
+docker-compose up -d
+
+# View logs
+docker-compose logs -f          # All services
+docker-compose logs -f api      # Just API
+docker-compose logs -f postgres # Just database
+```
+
+#### Docker Environment Variables
+
+Key environment variables for Docker deployment (see `.env.example`):
+
+```bash
+# Application
+APP_NAME=HypeAI
+ENVIRONMENT=production
+DEBUG=false
+LOG_LEVEL=INFO
+
+# Database (automatically used by docker-compose)
+POSTGRES_DB=hypeai
+POSTGRES_USER=hypeai_user
+POSTGRES_PASSWORD=changeme_secure_password
+DATABASE_URL=postgresql+asyncpg://hypeai_user:changeme_secure_password@postgres:5432/hypeai
+
+# Security (CRITICAL: Generate unique values!)
+SECRET_KEY=<generate-unique-key>
+ENCRYPTION_KEY=<generate-unique-key>
+
+# Spotify OAuth
+SPOTIFY_CLIENT_ID=<your-client-id>
+SPOTIFY_CLIENT_SECRET=<your-client-secret>
+SPOTIFY_REDIRECT_URI=http://localhost:8000/auth/spotify/callback
+
+# Docker Ports
+API_PORT=8000
+ADMINER_PORT=8080
+```
+
+#### Database Migrations with Docker
+
+```bash
+# Create a new migration
+docker-compose exec api alembic revision --autogenerate -m "Add new field"
+
+# Apply migrations
+docker-compose exec api alembic upgrade head
+
+# Rollback one migration
+docker-compose exec api alembic downgrade -1
+
+# View migration history
+docker-compose exec api alembic history
+
+# View current version
+docker-compose exec api alembic current
+```
+
+#### Production Deployment Checklist
+
+- [ ] Generate unique `SECRET_KEY` and `ENCRYPTION_KEY`
+- [ ] Set `ENVIRONMENT=production` and `DEBUG=false`
+- [ ] Use strong PostgreSQL password
+- [ ] Configure CORS for production domain
+- [ ] Set proper `SPOTIFY_REDIRECT_URI` for production
+- [ ] Enable HTTPS/TLS termination (use reverse proxy)
+- [ ] Set up database backups
+- [ ] Configure logging aggregation
+- [ ] Set up monitoring and alerts
+- [ ] Review and adjust resource limits
+
+#### Dockerfile Details
+
+The multi-stage Dockerfile optimizes for:
+
+- **Build Stage**: Installs dependencies with build tools
+- **Production Stage**: Minimal runtime image with only required packages
+- **Security**: Runs as non-root user (`appuser`)
+- **Health Checks**: Built-in health monitoring
+- **Layer Caching**: Optimized for fast rebuilds
+
+#### Troubleshooting Docker
+
+**API won't start:**
+
+```bash
+# Check logs for errors
+docker-compose logs api
+
+# Verify environment variables
+docker-compose exec api env | grep -E "DATABASE_URL|SECRET_KEY"
+
+# Check database connection
+docker-compose exec api python -c "from database import engine; import asyncio; asyncio.run(engine.connect())"
+```
+
+**Database connection issues:**
+
+```bash
+# Verify PostgreSQL is running
+docker-compose ps postgres
+
+# Check PostgreSQL logs
+docker-compose logs postgres
+
+# Test database connection
+docker-compose exec postgres psql -U hypeai_user -d hypeai -c "SELECT version();"
+```
+
+**Port conflicts:**
+
+```bash
+# Change ports in .env file
+API_PORT=8001
+POSTGRES_PORT=5433
+ADMINER_PORT=8081
+
+# Restart services
+docker-compose down && docker-compose up -d
+```
+
+#### Advanced: Custom Docker Configuration
+
+**Custom Dockerfile:**
+
+The included `Dockerfile` uses multi-stage builds for optimal image size:
+
 ```dockerfile
+# Stage 1: Builder - Install dependencies
+FROM python:3.11-slim as builder
+# ... dependency installation
+
+# Stage 2: Runtime - Copy only what's needed
 FROM python:3.11-slim
+# ... minimal runtime setup
+```
 
-WORKDIR /app
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+**Custom docker-compose.yml:**
 
-COPY src/hypeai /app/src/hypeai
-COPY .env /app/.env
+Create `docker-compose.override.yml` for local customizations:
 
-CMD ["uvicorn", "src.hypeai.main:app", "--host", "0.0.0.0", "--port", "8000"]
+```yaml
+version: '3.8'
+
+services:
+  api:
+    volumes:
+      # Mount local code for development
+      - ./src/hypeai:/app/src/hypeai:ro
+    environment:
+      DEBUG: "true"
 ```
 
 ## Contributing

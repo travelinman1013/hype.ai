@@ -3,6 +3,7 @@
 from auth.models import User
 from database import get_session
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from shared.dependencies import get_current_user_id
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,10 +14,14 @@ router = APIRouter()
 
 @router.get("/me")
 async def get_user_profile(
-    user_id: int = Query(..., description="User ID"),
     session: AsyncSession = Depends(get_session),
+    user_id: int = Depends(get_current_user_id),
 ):
-    """Get user profile."""
+    """
+    Get user profile.
+
+    Requires JWT authentication via Authorization header.
+    """
     result = await session.execute(select(User).where(User.id == user_id))
     user = result.scalars().first()
 
@@ -34,10 +39,14 @@ async def get_user_profile(
 
 @router.get("/me/subscription")
 async def get_subscription(
-    user_id: int = Query(..., description="User ID"),
     session: AsyncSession = Depends(get_session),
+    user_id: int = Depends(get_current_user_id),
 ):
-    """Get user subscription."""
+    """
+    Get user subscription.
+
+    Requires JWT authentication via Authorization header.
+    """
     result = await session.execute(select(Subscription).where(Subscription.user_id == user_id))
     subscription = result.scalars().first()
 
@@ -55,10 +64,14 @@ async def get_subscription(
 
 @router.get("/me/workouts")
 async def get_workout_history(
-    user_id: int = Query(..., description="User ID"),
     session: AsyncSession = Depends(get_session),
+    user_id: int = Depends(get_current_user_id),
 ):
-    """Get workout session history (premium only)."""
+    """
+    Get workout session history (premium only).
+
+    Requires JWT authentication via Authorization header.
+    """
     result = await session.execute(
         select(WorkoutSession)
         .where(WorkoutSession.user_id == user_id)

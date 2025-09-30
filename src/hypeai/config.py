@@ -121,6 +121,18 @@ class Settings(BaseSettings):
         description="Refresh tokens this many seconds before expiry"
     )
 
+    # JWT Settings
+    jwt_algorithm: str = Field(
+        default="HS256",
+        description="JWT signing algorithm"
+    )
+
+    jwt_access_token_expire_minutes: int = Field(
+        default=60 * 24,  # 24 hours
+        gt=0,
+        description="JWT access token expiration time in minutes"
+    )
+
     # WebSocket Settings
     websocket_heartbeat_interval: int = Field(
         default=30,
