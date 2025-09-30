@@ -1,3 +1,8 @@
+---
+description: Implement a feature using a PRP file
+argument-hint: [prp-file]
+---
+
 # Execute BASE PRP
 
 Implement a feature using using the PRP file.

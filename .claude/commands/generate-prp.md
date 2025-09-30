@@ -1,3 +1,8 @@
+---
+description: Generate a complete PRP for feature implementation with research
+argument-hint: [feature-file]
+---
+
 # Create PRP
 
 ## Feature file: $ARGUMENTS

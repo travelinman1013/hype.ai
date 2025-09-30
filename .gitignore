@@ -1,5 +1,67 @@
+# Python
 venv
 venv_linux
 __pycache__
-.ruff_cache
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Testing
 .pytest_cache
+.coverage
+htmlcov/
+.tox/
+.hypothesis/
+
+# Linting
+.ruff_cache
+.mypy_cache
+.dmypy.json
+dmypy.json
+
+# Environment
+.env
+.venv
+env/
+ENV/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+hypeai.db
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project specific
+examples/modular_fastapi/example.db
+examples/modular_fastapi/*.db

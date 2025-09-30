@@ -1,296 +1,357 @@
-# Context Engineering Template
+# HypeAI - Bio-Responsive Music Streaming Service
 
-A comprehensive template for getting started with Context Engineering - the discipline of engineering context for AI coding assistants so they have the information necessary to get the job done end to end.
+A FastAPI backend service that syncs real-time heart rate data from Apple HealthKit with Spotify to create adaptive workout playlists. Music automatically adjusts to your workout intensity based on your physiological state.
 
-> **Context Engineering is 10x better than prompt engineering and 100x better than vibe coding.**
+## Features
 
-## 🚀 Quick Start
+- **Spotify OAuth2 Integration**: Secure authentication with automatic token refresh
+- **Real-time Heart Rate Streaming**: WebSocket endpoint for continuous BPM data from mobile app
+- **Adaptive Music Selection**: Automatically queues tracks based on workout zones (warmup, cardio, peak)
+- **Rate Limiting**: Prevents Spotify API 429 errors with sliding window rate limiter
+- **Freemium Model**: Free music control, paid workout analytics (Spotify policy compliant)
+- **Secure Token Storage**: Encrypted OAuth tokens using Fernet encryption
+- **Modular Architecture**: Clean separation of concerns across auth, heartrate, music, and user modules
+
+## Architecture
+
+```
+src/hypeai/
+├── main.py                 # FastAPI app initialization
+├── config.py               # Environment settings
+├── database.py             # Async SQLModel database setup
+├── auth/                   # Spotify OAuth2 module
+│   ├── models.py           # User & OAuthToken models
+│   ├── schemas.py          # API request/response schemas
+│   ├── services.py         # Auth business logic
+│   ├── routes.py           # Auth endpoints
+│   └── spotify_client.py   # Spotify OAuth2 client
+├── heartrate/              # Heart rate streaming module
+│   ├── models.py           # HeartRateReading model
+│   ├── services.py         # Zone mapping logic
+│   ├── routes.py           # WebSocket endpoint
+│   └── connection_manager.py # WebSocket connection pool
+├── music/                  # Spotify integration module
+│   ├── spotify_api.py      # Spotify Web API client
+│   ├── rate_limiter.py     # Rate limiting implementation
+│   └── routes.py           # Music endpoints
+├── users/                  # User management module
+│   ├── models.py           # Subscription & WorkoutSession models
+│   └── routes.py           # User endpoints
+└── shared/                 # Shared utilities
+    ├── exceptions.py       # Custom exception classes
+    ├── security.py         # Token encryption utilities
+    └── dependencies.py     # FastAPI dependencies
+```
+
+## Quick Start
+
+### Prerequisites
+
+- Python 3.11+
+- Spotify Developer Account with registered app
+- SQLite (for development) or PostgreSQL (for production)
+
+### 1. Clone and Setup
 
 ```bash
-# 1. Clone this template
-git clone https://github.com/coleam00/Context-Engineering-Intro.git
-cd Context-Engineering-Intro
-
-# 2. Set up your project rules (optional - template provided)
-# Edit CLAUDE.md to add your project-specific guidelines
-
-# 3. Add examples (highly recommended)
-# Place relevant code examples in the examples/ folder
-
-# 4. Create your initial feature request
-# Edit INITIAL.md with your feature requirements
-
-# 5. Generate a comprehensive PRP (Product Requirements Prompt)
-# In Claude Code, run:
-/generate-prp INITIAL.md
-
-# 6. Execute the PRP to implement your feature
-# In Claude Code, run:
-/execute-prp PRPs/your-feature-name.md
+git clone <repository-url>
+cd hype.ai
 ```
 
-## 📚 Table of Contents
-
-- [What is Context Engineering?](#what-is-context-engineering)
-- [Template Structure](#template-structure)
-- [Step-by-Step Guide](#step-by-step-guide)
-- [Writing Effective INITIAL.md Files](#writing-effective-initialmd-files)
-- [The PRP Workflow](#the-prp-workflow)
-- [Using Examples Effectively](#using-examples-effectively)
-- [Best Practices](#best-practices)
-
-## What is Context Engineering?
-
-Context Engineering represents a paradigm shift from traditional prompt engineering:
-
-### Prompt Engineering vs Context Engineering
-
-**Prompt Engineering:**
-- Focuses on clever wording and specific phrasing
-- Limited to how you phrase a task
-- Like giving someone a sticky note
-
-**Context Engineering:**
-- A complete system for providing comprehensive context
-- Includes documentation, examples, rules, patterns, and validation
-- Like writing a full screenplay with all the details
-
-### Why Context Engineering Matters
-
-1. **Reduces AI Failures**: Most agent failures aren't model failures - they're context failures
-2. **Ensures Consistency**: AI follows your project patterns and conventions
-3. **Enables Complex Features**: AI can handle multi-step implementations with proper context
-4. **Self-Correcting**: Validation loops allow AI to fix its own mistakes
-
-## Template Structure
-
-```
-context-engineering-intro/
-├── .claude/
-│   ├── commands/
-│   │   ├── generate-prp.md    # Generates comprehensive PRPs
-│   │   └── execute-prp.md     # Executes PRPs to implement features
-│   └── settings.local.json    # Claude Code permissions
-├── PRPs/
-│   ├── templates/
-│   │   └── prp_base.md       # Base template for PRPs
-│   └── EXAMPLE_multi_agent_prp.md  # Example of a complete PRP
-├── examples/                  # Your code examples (critical!)
-├── CLAUDE.md                 # Global rules for AI assistant
-├── INITIAL.md               # Template for feature requests
-├── INITIAL_EXAMPLE.md       # Example feature request
-└── README.md                # This file
-```
-
-This template doesn't focus on RAG and tools with context engineering because I have a LOT more in store for that soon. ;)
-
-## Step-by-Step Guide
-
-### 1. Set Up Global Rules (CLAUDE.md)
-
-The `CLAUDE.md` file contains project-wide rules that the AI assistant will follow in every conversation. The template includes:
-
-- **Project awareness**: Reading planning docs, checking tasks
-- **Code structure**: File size limits, module organization
-- **Testing requirements**: Unit test patterns, coverage expectations
-- **Style conventions**: Language preferences, formatting rules
-- **Documentation standards**: Docstring formats, commenting practices
-
-**You can use the provided template as-is or customize it for your project.**
-
-### 2. Create Your Initial Feature Request
-
-Edit `INITIAL.md` to describe what you want to build:
-
-```markdown
-## FEATURE:
-[Describe what you want to build - be specific about functionality and requirements]
-
-## EXAMPLES:
-[List any example files in the examples/ folder and explain how they should be used]
-
-## DOCUMENTATION:
-[Include links to relevant documentation, APIs, or MCP server resources]
-
-## OTHER CONSIDERATIONS:
-[Mention any gotchas, specific requirements, or things AI assistants commonly miss]
-```
-
-**See `INITIAL_EXAMPLE.md` for a complete example.**
-
-### 3. Generate the PRP
-
-PRPs (Product Requirements Prompts) are comprehensive implementation blueprints that include:
-
-- Complete context and documentation
-- Implementation steps with validation
-- Error handling patterns
-- Test requirements
-
-They are similar to PRDs (Product Requirements Documents) but are crafted more specifically to instruct an AI coding assistant.
-
-Run in Claude Code:
-```bash
-/generate-prp INITIAL.md
-```
-
-**Note:** The slash commands are custom commands defined in `.claude/commands/`. You can view their implementation:
-- `.claude/commands/generate-prp.md` - See how it researches and creates PRPs
-- `.claude/commands/execute-prp.md` - See how it implements features from PRPs
-
-The `$ARGUMENTS` variable in these commands receives whatever you pass after the command name (e.g., `INITIAL.md` or `PRPs/your-feature.md`).
-
-This command will:
-1. Read your feature request
-2. Research the codebase for patterns
-3. Search for relevant documentation
-4. Create a comprehensive PRP in `PRPs/your-feature-name.md`
-
-### 4. Execute the PRP
-
-Once generated, execute the PRP to implement your feature:
+### 2. Create Virtual Environment
 
 ```bash
-/execute-prp PRPs/your-feature-name.md
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
 ```
 
-The AI coding assistant will:
-1. Read all context from the PRP
-2. Create a detailed implementation plan
-3. Execute each step with validation
-4. Run tests and fix any issues
-5. Ensure all success criteria are met
+### 3. Install Dependencies
 
-## Writing Effective INITIAL.md Files
-
-### Key Sections Explained
-
-**FEATURE**: Be specific and comprehensive
-- ❌ "Build a web scraper"
-- ✅ "Build an async web scraper using BeautifulSoup that extracts product data from e-commerce sites, handles rate limiting, and stores results in PostgreSQL"
-
-**EXAMPLES**: Leverage the examples/ folder
-- Place relevant code patterns in `examples/`
-- Reference specific files and patterns to follow
-- Explain what aspects should be mimicked
-
-**DOCUMENTATION**: Include all relevant resources
-- API documentation URLs
-- Library guides
-- MCP server documentation
-- Database schemas
-
-**OTHER CONSIDERATIONS**: Capture important details
-- Authentication requirements
-- Rate limits or quotas
-- Common pitfalls
-- Performance requirements
-
-## The PRP Workflow
-
-### How /generate-prp Works
-
-The command follows this process:
-
-1. **Research Phase**
-   - Analyzes your codebase for patterns
-   - Searches for similar implementations
-   - Identifies conventions to follow
-
-2. **Documentation Gathering**
-   - Fetches relevant API docs
-   - Includes library documentation
-   - Adds gotchas and quirks
-
-3. **Blueprint Creation**
-   - Creates step-by-step implementation plan
-   - Includes validation gates
-   - Adds test requirements
-
-4. **Quality Check**
-   - Scores confidence level (1-10)
-   - Ensures all context is included
-
-### How /execute-prp Works
-
-1. **Load Context**: Reads the entire PRP
-2. **Plan**: Creates detailed task list using TodoWrite
-3. **Execute**: Implements each component
-4. **Validate**: Runs tests and linting
-5. **Iterate**: Fixes any issues found
-6. **Complete**: Ensures all requirements met
-
-See `PRPs/EXAMPLE_multi_agent_prp.md` for a complete example of what gets generated.
-
-## Using Examples Effectively
-
-The `examples/` folder is **critical** for success. AI coding assistants perform much better when they can see patterns to follow.
-
-### What to Include in Examples
-
-1. **Code Structure Patterns**
-   - How you organize modules
-   - Import conventions
-   - Class/function patterns
-
-2. **Testing Patterns**
-   - Test file structure
-   - Mocking approaches
-   - Assertion styles
-
-3. **Integration Patterns**
-   - API client implementations
-   - Database connections
-   - Authentication flows
-
-4. **CLI Patterns**
-   - Argument parsing
-   - Output formatting
-   - Error handling
-
-### Example Structure
-
-```
-examples/
-├── README.md           # Explains what each example demonstrates
-├── cli.py             # CLI implementation pattern
-├── agent/             # Agent architecture patterns
-│   ├── agent.py      # Agent creation pattern
-│   ├── tools.py      # Tool implementation pattern
-│   └── providers.py  # Multi-provider pattern
-└── tests/            # Testing patterns
-    ├── test_agent.py # Unit test patterns
-    └── conftest.py   # Pytest configuration
+```bash
+pip install -r requirements.txt
 ```
 
-## Best Practices
+### 4. Configure Environment
 
-### 1. Be Explicit in INITIAL.md
-- Don't assume the AI knows your preferences
-- Include specific requirements and constraints
-- Reference examples liberally
+```bash
+cp .env.example .env
+```
 
-### 2. Provide Comprehensive Examples
-- More examples = better implementations
-- Show both what to do AND what not to do
-- Include error handling patterns
+Edit `.env` with your Spotify credentials:
 
-### 3. Use Validation Gates
-- PRPs include test commands that must pass
-- AI will iterate until all validations succeed
-- This ensures working code on first try
+```bash
+# Get these from https://developer.spotify.com/dashboard
+SPOTIFY_CLIENT_ID=your_client_id_here
+SPOTIFY_CLIENT_SECRET=your_client_secret_here
+SPOTIFY_REDIRECT_URI=http://localhost:8000/auth/spotify/callback
 
-### 4. Leverage Documentation
-- Include official API docs
-- Add MCP server resources
-- Reference specific documentation sections
+# Generate encryption key
+python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+# Copy output to ENCRYPTION_KEY
+ENCRYPTION_KEY=your_generated_key_here
 
-### 5. Customize CLAUDE.md
-- Add your conventions
-- Include project-specific rules
-- Define coding standards
+# Generate secret key
+python -c "import secrets; print(secrets.token_urlsafe(32))"
+# Copy output to SECRET_KEY
+SECRET_KEY=your_generated_secret_here
+```
 
-## Resources
+### 5. Run the Application
 
-- [Claude Code Documentation](https://docs.anthropic.com/en/docs/claude-code)
-- [Context Engineering Best Practices](https://www.philschmid.de/context-engineering)
+```bash
+cd src/hypeai
+python main.py
+```
+
+Or with uvicorn directly:
+
+```bash
+uvicorn src.hypeai.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+### 6. Access the API
+
+- **API Documentation**: http://localhost:8000/docs
+- **Alternative Docs**: http://localhost:8000/redoc
+- **Health Check**: http://localhost:8000/health
+
+## API Endpoints
+
+### Authentication
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/auth/spotify` | Get Spotify authorization URL |
+| GET | `/auth/spotify/callback` | Handle OAuth callback |
+| POST | `/auth/logout` | Revoke user tokens |
+| GET | `/auth/me` | Get current user info |
+
+### Heart Rate Streaming
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| WebSocket | `/ws/heartrate?user_id=X` | Stream heart rate data |
+
+**WebSocket Message Format:**
+```json
+{
+  "bpm": 125,
+  "timestamp": "2025-01-15T10:30:00Z"
+}
+```
+
+**Response:**
+```json
+{
+  "bpm": 125,
+  "zone": "cardio",
+  "features": {
+    "target_tempo": 130,
+    "target_energy": 0.7,
+    "target_danceability": 0.7,
+    "target_valence": 0.7
+  },
+  "message": "Heart rate 125 BPM mapped to cardio zone"
+}
+```
+
+### Music
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/music/zones` | Get zone configuration |
+| GET | `/music/current?user_id=X` | Get current playback |
+| POST | `/music/queue?track_uri=X&user_id=Y` | Queue a track (testing) |
+
+### Users
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/users/me?user_id=X` | Get user profile |
+| GET | `/users/me/subscription?user_id=X` | Get subscription |
+| GET | `/users/me/workouts?user_id=X` | Get workout history |
+
+## Workout Zones
+
+Heart rate is mapped to workout zones with corresponding Spotify audio features:
+
+| Zone | BPM Range | Tempo | Energy | Description |
+|------|-----------|-------|--------|-------------|
+| **Warmup** | 90-110 | 100 | 0.4 | Low-intensity warm-up |
+| **Cardio** | 111-140 | 130 | 0.7 | Moderate cardio workout |
+| **Peak** | 141+ | 160 | 0.9 | High-intensity peak effort |
+
+## Development Workflow
+
+### Running Tests
+
+```bash
+# Run all tests
+pytest src/hypeai/tests/ -v
+
+# Run with coverage
+pytest src/hypeai/tests/ -v --cov=src/hypeai --cov-report=term-missing
+
+# Run only unit tests (skip integration)
+pytest src/hypeai/tests/ -v -m "not integration"
+```
+
+### Code Quality
+
+```bash
+# Lint with ruff
+ruff check src/hypeai/ examples/ --fix
+
+# Type check with mypy
+mypy src/hypeai/ examples/
+
+# Format with black
+black src/hypeai/ examples/
+```
+
+### Database Migrations
+
+```bash
+# Create migration
+alembic revision --autogenerate -m "Description"
+
+# Apply migrations
+alembic upgrade head
+
+# Rollback
+alembic downgrade -1
+```
+
+## Testing the Application
+
+### 1. Test OAuth Flow
+
+```bash
+# Get authorization URL
+curl http://localhost:8000/auth/spotify
+# Visit the auth_url in browser and authorize
+
+# Handle callback (will be automatic redirect)
+# User will be created and tokens stored
+```
+
+### 2. Test WebSocket Connection
+
+Using `websocat` or similar tool:
+
+```bash
+websocat ws://localhost:8000/ws/heartrate?user_id=1
+
+# Send heart rate data
+{"bpm": 95}
+{"bpm": 125}
+{"bpm": 155}
+
+# Observe zone changes
+```
+
+### 3. Test Music Endpoints
+
+```bash
+# Get zone configuration
+curl http://localhost:8000/music/zones
+
+# Get current playback
+curl "http://localhost:8000/music/current?user_id=1"
+
+# Queue a track (get track URI from Spotify)
+curl -X POST "http://localhost:8000/music/queue?track_uri=spotify:track:TRACK_ID&user_id=1"
+```
+
+## Spotify Commercialization Compliance
+
+This application complies with Spotify's commercialization policy:
+
+- ✅ **Music Control**: FREE - Users control their own Spotify playback
+- ✅ **Analytics**: PAID - Workout history and heart rate analytics require premium subscription
+- ❌ **No Streaming Charges**: We don't charge for music streaming features
+- ❌ **No Ads**: No ads shown during music playback
+
+The freemium model monetizes fitness features, not music access.
+
+## Security Considerations
+
+- **Token Encryption**: All OAuth tokens encrypted at rest using Fernet
+- **HTTPS Required**: Use HTTPS in production for all endpoints
+- **Rate Limiting**: Prevents abuse and API quota exhaustion
+- **WebSocket Authentication**: Require token validation before accepting connections
+- **Environment Variables**: Never commit `.env` files with secrets
+
+## Known Limitations
+
+- **HealthKit is Local Only**: No cloud API exists. Mobile app must stream data via WebSocket
+- **Spotify Rate Limits**: 30-second rolling window, varies by quota mode
+- **Token Refresh**: Access tokens expire in 1 hour, automatic refresh implemented
+- **Queue Behavior**: Spotify API adds to queue, doesn't skip current track
+
+## Production Deployment
+
+### Environment Variables
+
+Ensure all production settings are configured:
+
+```bash
+ENVIRONMENT=production
+DEBUG=false
+DATABASE_URL=postgresql+asyncpg://user:pass@host:5432/hypeai
+ENCRYPTION_KEY=<production-key>
+SECRET_KEY=<production-secret>
+SPOTIFY_REDIRECT_URI=https://yourdomain.com/auth/spotify/callback
+CORS_ORIGINS=https://yourdomain.com,https://app.yourdomain.com
+```
+
+### Database
+
+Use PostgreSQL for production:
+
+```bash
+# Install PostgreSQL driver
+pip install asyncpg
+
+# Update DATABASE_URL in .env
+DATABASE_URL=postgresql+asyncpg://user:password@localhost:5432/hypeai
+```
+
+### Running with Uvicorn
+
+```bash
+uvicorn src.hypeai.main:app --host 0.0.0.0 --port 8000 --workers 4
+```
+
+### Docker Deployment
+
+```dockerfile
+FROM python:3.11-slim
+
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY src/hypeai /app/src/hypeai
+COPY .env /app/.env
+
+CMD ["uvicorn", "src.hypeai.main:app", "--host", "0.0.0.0", "--port", "8000"]
+```
+
+## Contributing
+
+1. Follow the modular architecture patterns in `examples/`
+2. Write tests for all new features
+3. Maintain 80%+ test coverage
+4. Use type hints everywhere
+5. Follow PEP 8 and project conventions in `CLAUDE.md`
+
+## License
+
+[Your License Here]
+
+## Support
+
+- **Issues**: https://github.com/yourorg/hypeai/issues
+- **Documentation**: https://docs.yourdomain.com
+- **Spotify API**: https://developer.spotify.com/documentation/web-api/
